@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Proteomic - Workflow Builder</title>
+    <style>
+      :root {
+        --color-data-loading: #2563eb;
+        --color-denovo: #16a34a;
+        --color-db-search: #9333ea;
+        --border: #e2e8f0;
+        --bg: #f8fafc;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        color: #1e293b;
+        background: var(--bg);
+      }
+
+      header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        background: #fff;
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: 1.25rem;
+      }
+
+      header p {
+        margin: 0.25rem 0 0;
+        color: #64748b;
+        font-size: 0.875rem;
+      }
+
+      .app {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem 1.5rem;
+      }
+
+      /* ---------- Palette (left side) ---------- */
+      .palette {
+        flex: 0 0 220px;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem;
+        position: sticky;
+        top: 1rem;
+      }
+
+      .palette h2 {
+        margin: 0 0 0.75rem;
+        font-size: 0.95rem;
+      }
+
+      .palette-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.6rem 0.75rem;
+        margin-bottom: 0.5rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 0.9rem;
+        text-align: left;
+        transition: background 0.15s, transform 0.05s;
+      }
+
+      .palette-item:hover {
+        background: #f1f5f9;
+      }
+
+      .palette-item:active {
+        transform: scale(0.98);
+      }
+
+      .palette-item .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .palette-hint {
+        margin-top: 0.75rem;
+        font-size: 0.8rem;
+        color: #64748b;
+      }
+
+      /* ---------- Workflow (right side) ---------- */
+      .workflow {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .workflow-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+      }
+
+      .workflow-toolbar h2 {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+
+      .workflow-toolbar button {
+        font-size: 0.8rem;
+        padding: 0.35rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+      }
+
+      .workflow-toolbar button:hover {
+        background: #f1f5f9;
+      }
+
+      .empty-hint {
+        border: 2px dashed var(--border);
+        border-radius: 8px;
+        padding: 2.5rem 1rem;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.9rem;
+      }
+
+      .workflow-list {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .connector {
+        width: 2px;
+        height: 24px;
+        background: var(--border);
+        margin: 0 auto;
+        position: relative;
+      }
+
+      .connector::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: -1px;
+        transform: translateX(-50%);
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 6px solid var(--border);
+      }
+
+      .node-card {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-left: 6px solid var(--node-color, #94a3b8);
+        border-radius: 8px;
+        padding: 0.9rem 1rem;
+        cursor: grab;
+      }
+
+      .node-card.dragging {
+        opacity: 0.4;
+      }
+
+      .node-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .node-card-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+      }
+
+      .node-card-title .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--node-color, #94a3b8);
+        flex-shrink: 0;
+      }
+
+      .node-card-actions button {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+        margin-left: 0.35rem;
+      }
+
+      .node-card-actions button:hover {
+        background: #f1f5f9;
+      }
+
+      .node-card-actions button.primary {
+        background: var(--node-color, #2563eb);
+        border-color: var(--node-color, #2563eb);
+        color: #fff;
+      }
+
+      .node-card-actions button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .node-card-body {
+        margin-top: 0.75rem;
+        font-size: 0.85rem;
+        color: #475569;
+      }
+
+      .field-row {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        flex: 1;
+        min-width: 160px;
+      }
+
+      .field label {
+        font-size: 0.75rem;
+        color: #64748b;
+      }
+
+      .field input {
+        padding: 0.35rem 0.5rem;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font-size: 0.85rem;
+      }
+
+      .placeholder-note {
+        font-style: italic;
+        color: #94a3b8;
+      }
+
+      pre.result {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.6rem;
+        margin: 0.5rem 0 0;
+        font-size: 0.78rem;
+        white-space: pre-wrap;
+        max-height: 220px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Proteomic Workflow Builder (experimental scaffold)</h1>
+      <p>Add nodes from the left panel to build a workflow. Each node maps to a Docker container.</p>
+    </header>
+
+    <div class="app">
+      <aside class="palette">
+        <h2>Nodes</h2>
+        <div id="palette-items"></div>
+        <p class="palette-hint">Click a node to add it to the workflow. Drag cards in the workflow to reorder.</p>
+      </aside>
+
+      <main class="workflow">
+        <div class="workflow-toolbar">
+          <h2>Workflow</h2>
+          <button id="clear-workflow">Clear workflow</button>
+        </div>
+        <p class="empty-hint" id="empty-hint">Workflow is empty — add a node from the left panel to get started.</p>
+        <div class="workflow-list" id="workflow-list"></div>
+      </main>
+    </div>
+
+    <script>
+      const { invoke } = window.__TAURI__.core;
+
+      // StorageType enum (see proto/workflow.proto) is serialized as a number:
+      // UNSPECIFIED=0, LOCAL_FILE=1, S3_OBJECT=2, K8S_PVC=3
+      const STORAGE_TYPE_LOCAL_FILE = 1;
+
+      // Node type definitions for the palette. Only "data-loading" is wired
+      // up to a real backend command (handle_load_data); the other two are
+      // placeholders for future nodes/containers.
+      const NODE_TYPES = {
+        "data-loading": {
+          label: "Data Loading",
+          color: "var(--color-data-loading)",
+          description: "Parses raw spectra files and emits a result.pb (LoadDataResult).",
+        },
+        "denovo": {
+          label: "De Novo",
+          color: "var(--color-denovo)",
+          description: "De novo peptide sequencing (not implemented yet).",
+          // This node type consumes the output of a "data-loading" node.
+          requiresDependency: "data-loading",
+        },
+        "db-search": {
+          label: "DB Search",
+          color: "var(--color-db-search)",
+          description: "Database search against a protein FASTA (not implemented yet).",
+          // This node type consumes the output of a "data-loading" node.
+          requiresDependency: "data-loading",
+        },
+      };
+
+      // Each workflow node instance: { id, type, config, result, error, running }
+      let workflow = [];
+      let nextId = 1;
+
+      function createDefaultConfig(type) {
+        if (type === "data-loading") {
+          return {
+            inputDir: "../sample_data/input",
+            outputDir: "../sample_data/output",
+            minIntensityThreshold: 1000,
+            allowedFileExtensions: ".txt",
+          };
+        }
+        if (NODE_TYPES[type].requiresDependency) {
+          return { dependsOn: null };
+        }
+        return {};
+      }
+
+      // Returns the workflow nodes that `type` is allowed to depend on.
+      function dependencyCandidates(type) {
+        const requiredType = NODE_TYPES[type].requiresDependency;
+        if (!requiredType) return [];
+        return workflow.filter((n) => n.type === requiredType);
+      }
+
+      function addNode(type) {
+        const def = NODE_TYPES[type];
+        if (def.requiresDependency) {
+          const candidates = dependencyCandidates(type);
+          if (candidates.length === 0) {
+            alert(
+              `${def.label} depends on a ${NODE_TYPES[def.requiresDependency].label} node — add one first.`
+            );
+            return;
+          }
+        }
+
+        const node = {
+          id: nextId++,
+          type,
+          config: createDefaultConfig(type),
+          result: null,
+          error: null,
+          running: false,
+        };
+
+        // Default to depending on the most recently added matching node.
+        if (def.requiresDependency) {
+          const candidates = dependencyCandidates(type);
+          node.config.dependsOn = candidates[candidates.length - 1].id;
+        }
+
+        workflow.push(node);
+        render();
+      }
+
+      function removeNode(id) {
+        workflow = workflow.filter((n) => n.id !== id);
+        // Clear dependencies that pointed at the removed node.
+        workflow.forEach((n) => {
+          if (n.config && n.config.dependsOn === id) {
+            n.config.dependsOn = null;
+          }
+        });
+        render();
+      }
+
+      function clearWorkflow() {
+        workflow = [];
+        render();
+      }
+
+      async function runDataLoadingNode(node) {
+        node.running = true;
+        node.error = null;
+        node.result = null;
+        render();
+
+        const config = {
+          inputData: {
+            storageType: STORAGE_TYPE_LOCAL_FILE,
+            uri: node.config.inputDir,
+            metadata: {},
+          },
+          outputDirectory: {
+            storageType: STORAGE_TYPE_LOCAL_FILE,
+            uri: node.config.outputDir,
+            metadata: {},
+          },
+          minIntensityThreshold: Number(node.config.minIntensityThreshold) || 0,
+          allowedFileExtensions: node.config.allowedFileExtensions
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0),
+        };
+
+        try {
+          node.result = await invoke("handle_load_data", { config });
+        } catch (err) {
+          node.error = String(err);
+        } finally {
+          node.running = false;
+          render();
+        }
+      }
+
+      function renderPalette() {
+        const container = document.getElementById("palette-items");
+        container.innerHTML = "";
+        for (const [type, def] of Object.entries(NODE_TYPES)) {
+          const btn = document.createElement("button");
+          btn.className = "palette-item";
+
+          let disabled = false;
+          if (def.requiresDependency && dependencyCandidates(type).length === 0) {
+            disabled = true;
+            btn.title = `Requires a ${NODE_TYPES[def.requiresDependency].label} node in the workflow`;
+          }
+          btn.disabled = disabled;
+
+          btn.innerHTML = `<span class="dot" style="background:${def.color}"></span><span>${def.label}</span>`;
+          btn.addEventListener("click", () => addNode(type));
+          container.appendChild(btn);
+        }
+      }
+
+      // Human-readable label for a node, e.g. "Data Loading (step 2)".
+      function nodeStepLabel(node) {
+        const index = workflow.indexOf(node);
+        return `${NODE_TYPES[node.type].label} (step ${index + 1})`;
+      }
+
+      function renderDependencyField(node) {
+        const def = NODE_TYPES[node.type];
+        const candidates = dependencyCandidates(node.type);
+        const dependsOn = node.config.dependsOn;
+
+        let options = "";
+        if (candidates.length === 0) {
+          options = `<option value="">(none available)</option>`;
+        } else {
+          for (const candidate of candidates) {
+            const selected = candidate.id === dependsOn ? "selected" : "";
+            options += `<option value="${candidate.id}" ${selected}>${nodeStepLabel(candidate)}</option>`;
+          }
+        }
+
+        let html = `
+          <div class="field-row">
+            <div class="field">
+              <label>Depends on (${NODE_TYPES[def.requiresDependency].label})</label>
+              <select data-field="dependsOn">${options}</select>
+            </div>
+          </div>
+        `;
+
+        if (!candidates.some((c) => c.id === dependsOn)) {
+          html += `<p class="warning">⚠ Missing dependency: add a ${NODE_TYPES[def.requiresDependency].label} node and select it above.</p>`;
+        }
+
+        return html;
+      }
+
+      function renderNodeBody(node) {
+        const def = NODE_TYPES[node.type];
+
+        if (node.type !== "data-loading") {
+          return `<p class="placeholder-note">${def.description}</p>` + renderDependencyField(node);
+        }
+
+        const cfg = node.config;
+        let html = `
+          <div class="field-row">
+            <div class="field">
+              <label>Input directory</label>
+              <input type="text" data-field="inputDir" value="${cfg.inputDir}" />
+            </div>
+            <div class="field">
+              <label>Output directory</label>
+              <input type="text" data-field="outputDir" value="${cfg.outputDir}" />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Min intensity threshold</label>
+              <input type="number" data-field="minIntensityThreshold" value="${cfg.minIntensityThreshold}" />
+            </div>
+            <div class="field">
+              <label>Allowed file extensions (comma separated)</label>
+              <input type="text" data-field="allowedFileExtensions" value="${cfg.allowedFileExtensions}" />
+            </div>
+          </div>
+        `;
+
+        if (node.running) {
+          html += `<pre class="result">Running...</pre>`;
+        } else if (node.error) {
+          html += `<pre class="result">Error: ${node.error}</pre>`;
+        } else if (node.result) {
+          html += `<pre class="result">${JSON.stringify(node.result, null, 2)}</pre>`;
+        }
+
+        return html;
+      }
+
+      function render() {
+        const list = document.getElementById("workflow-list");
+        const emptyHint = document.getElementById("empty-hint");
+
+        emptyHint.style.display = workflow.length === 0 ? "block" : "none";
+        list.innerHTML = "";
+
+        workflow.forEach((node, index) => {
+          if (index > 0) {
+            const connector = document.createElement("div");
+            connector.className = "connector";
+            list.appendChild(connector);
+          }
+
+          const def = NODE_TYPES[node.type];
+          const card = document.createElement("div");
+          card.className = "node-card";
+          card.style.setProperty("--node-color", def.color);
+          card.draggable = true;
+          card.dataset.id = node.id;
+
+          const runDisabled = node.type !== "data-loading" || node.running;
+
+          card.innerHTML = `
+            <div class="node-card-header">
+              <div class="node-card-title">
+                <span class="dot"></span>
+                <span>${index + 1}. ${def.label}</span>
+              </div>
+              <div class="node-card-actions">
+                <button class="primary" data-action="run" ${runDisabled ? "disabled" : ""}>
+                  ${node.running ? "Running..." : "Run"}
+                </button>
+                <button data-action="remove">Remove</button>
+              </div>
+            </div>
+            <div class="node-card-body">${renderNodeBody(node)}</div>
+          `;
+
+          // Wire up config field inputs.
+          card.querySelectorAll("[data-field]").forEach((input) => {
+            input.addEventListener("change", (e) => {
+              const field = e.target.dataset.field;
+              if (field === "dependsOn") {
+                node.config.dependsOn = e.target.value ? Number(e.target.value) : null;
+                render();
+                return;
+              }
+              node.config[field] = e.target.value;
+            });
+          });
+
+          // Wire up action buttons.
+          card.querySelector('[data-action="remove"]').addEventListener("click", () => removeNode(node.id));
+          const runBtn = card.querySelector('[data-action="run"]');
+          if (runBtn && !runDisabled) {
+            runBtn.addEventListener("click", () => runDataLoadingNode(node));
+          }
+
+          // Drag-and-drop reordering.
+          card.addEventListener("dragstart", (e) => {
+            card.classList.add("dragging");
+            e.dataTransfer.setData("text/plain", String(node.id));
+          });
+          card.addEventListener("dragend", () => card.classList.remove("dragging"));
+          card.addEventListener("dragover", (e) => e.preventDefault());
+          card.addEventListener("drop", (e) => {
+            e.preventDefault();
+            const draggedId = Number(e.dataTransfer.getData("text/plain"));
+            if (draggedId === node.id) return;
+            const fromIndex = workflow.findIndex((n) => n.id === draggedId);
+            const toIndex = workflow.findIndex((n) => n.id === node.id);
+            const [moved] = workflow.splice(fromIndex, 1);
+            workflow.splice(toIndex, 0, moved);
+            render();
+          });
+
+          list.appendChild(card);
+        });
+
+        renderPalette();
+      }
+
+      document.getElementById("clear-workflow").addEventListener("click", clearWorkflow);
+
+      renderPalette();
+      render();
+    </script>
+  </body>
+</html>

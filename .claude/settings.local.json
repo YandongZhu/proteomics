@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo check *)",
+      "Bash(python3 *)",
+      "Bash(mkdir -p /tmp/pb_test)",
+      "Read(//tmp/**)",
+      "Bash(cp /Users/yandong/Documents/code/proteomic/docker/load_data/load_data.py .)",
+      "Bash(mkdir -p /tmp/pb_test/data/input /tmp/pb_test/data/output)",
+      "Bash(cp /Users/yandong/Documents/code/proteomic/sample_data/input/sample_spectra.txt /tmp/pb_test/data/input/)",
+      "Bash(cargo run *)",
+      "Bash(cargo tauri *)",
+      "Bash(cargo install *)",
+      "Bash(/Users/yandong/Documents/code/proteomic/target/debug/proteomic-app)",
+      "Bash(echo \"EXIT=$?\")"
+    ]
+  }
+}

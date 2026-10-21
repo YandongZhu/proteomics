@@ -1,0 +1,5 @@
+scan=1 rt=10.1 intensity=5000
+scan=2 rt=10.3 intensity=12000
+scan=3 rt=10.5 intensity=800
+scan=4 rt=10.8 intensity=30000
+scan=5 rt=11.0 intensity=150

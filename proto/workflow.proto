@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package proteomic.workflow.v1;
+
+// Storage backend type for a piece of data.
+// Currently only LOCAL_FILE (local filesystem path) is used.
+// S3_OBJECT / other types are reserved so that switching to object
+// storage or K8s PVCs in the future does not require changing the
+// message structure itself.
+enum StorageType {
+  STORAGE_TYPE_UNSPECIFIED = 0;
+  // Local filesystem path (used during the single-machine Docker stage).
+  LOCAL_FILE = 1;
+  // S3 / S3-compatible object storage (reserved for future K8s scenarios).
+  S3_OBJECT = 2;
+  // Path inside a K8s PersistentVolumeClaim (reserved).
+  K8S_PVC = 3;
+}
+
+// Execution status of a node.
+enum NodeStatus {
+  NODE_STATUS_UNSPECIFIED = 0;
+  RUNNING = 1;
+  SUCCESS = 2;
+  FAILED = 3;
+}
+
+// A reference to a piece of data: nodes hand off data to each other by
+// passing a DataReference instead of a raw path string, which keeps the
+// storage backend pluggable.
+message DataReference {
+  // Storage backend type that this data lives in.
+  StorageType storage_type = 1;
+
+  // Resource locator.
+  // - LOCAL_FILE: absolute local path, e.g. "/data/projects/p1/raw"
+  // - S3_OBJECT:  URI of the form "s3://bucket/key" (reserved)
+  // - K8S_PVC:    URI of the form "pvc://<pvc-name>/path" (reserved)
+  string uri = 2;
+
+  // Optional extra metadata (e.g. file size, checksum, content type).
+  map<string, string> metadata = 3;
+}
+
+// Input configuration for the LoadData node.
+message LoadDataConfig {
+  // Reference to the directory/file containing the raw data to load.
+  // During local execution: uri points to a directory on the host,
+  // which is mounted into the container at /data/input.
+  DataReference input_data = 1;
+
+  // Location where the node should write its output (e.g. result.pb).
+  // During local execution: uri points to a directory on the host,
+  // which is mounted into the container at /data/output.
+  DataReference output_directory = 2;
+
+  // Example filter parameter: minimum intensity threshold; spectra/features
+  // below this value are filtered out.
+  double min_intensity_threshold = 3;
+
+  // List of allowed file extensions to process, e.g. [".txt", ".mzml"].
+  repeated string allowed_file_extensions = 4;
+}
+
+// Output result of the LoadData node.
+message LoadDataResult {
+  // Execution status of the node.
+  NodeStatus status = 1;
+
+  // Status message / error description.
+  string message = 2;
+
+  // Number of spectra parsed.
+  uint64 spectrum_count = 3;
+
+  // Number of features parsed.
+  uint64 feature_count = 4;
+
+  // Reference to the output data (e.g. result.pb) for downstream nodes.
+  DataReference output_data = 5;
+}

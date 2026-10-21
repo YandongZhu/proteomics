@@ -1,0 +1,15 @@
+[package]
+name = "workflow-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+prost = "0.13"
+async-trait = "0.1"
+tokio = { version = "1", features = ["process", "fs", "macros", "rt"] }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+
+[build-dependencies]
+prost-build = "0.13"
+protoc-bin-vendored = "3"
